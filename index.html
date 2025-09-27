@@ -55,7 +55,7 @@
             padding: 30px;
         }
 
-        /* Загрузка изображения */
+        /* Остальные стили без изменений */
         .upload-section {
             margin-bottom: 30px;
         }
@@ -82,7 +82,6 @@
             color: var(--primary);
         }
 
-        /* Предпросмотр и настройки */
         .preview-section {
             display: none;
             margin: 30px 0;
@@ -146,7 +145,6 @@
             font-weight: bold;
         }
 
-        /* Добавляем стили для select */
         select.full-width {
             width: 100%;
             padding: 10px;
@@ -156,7 +154,6 @@
             background: white;
         }
 
-        /* Кнопки управления */
         .controls {
             display: flex;
             gap: 10px;
@@ -209,7 +206,6 @@
             box-shadow: 0 5px 15px rgba(0, 136, 204, 0.3);
         }
 
-        /* Прогресс и результаты */
         .progress-section {
             display: none;
             margin: 20px 0;
@@ -277,7 +273,6 @@
             gap: 5px;
         }
 
-        /* Модальное окно для Telegram */
         .modal {
             display: none;
             position: fixed;
@@ -312,7 +307,6 @@
             flex-wrap: wrap;
         }
 
-        /* Адаптивность */
         @media (max-width: 768px) {
             .content {
                 padding: 20px;
@@ -340,7 +334,6 @@
             }
         }
 
-        /* Уведомления */
         .notification {
             position: fixed;
             top: 20px;
@@ -436,17 +429,6 @@
                                 <option value="auto">Авто (рекомендуется)</option>
                                 <option value="printed">Печатный текст</option>
                                 <option value="handwritten">Рукописный текст</option>
-                            </select>
-                        </div>
-
-                        <!-- Новая настройка для улучшения рукописного текста -->
-                        <div class="setting-group">
-                            <label for="handwritingEnhancement">Улучшение для рукописного текста:</label>
-                            <select id="handwritingEnhancement" class="full-width">
-                                <option value="auto">Автоматически</option>
-                                <option value="light">Легкое улучшение</option>
-                                <option value="medium">Среднее улучшение</option>
-                                <option value="strong">Сильное улучшение</option>
                             </select>
                         </div>
                     </div>
@@ -581,8 +563,7 @@
                 brightness: 100,
                 sharpness: 100,
                 language: 'rus',
-                mode: 'auto',
-                handwritingEnhancement: 'auto'
+                mode: 'auto'
             }
         };
 
@@ -636,11 +617,6 @@
 
             document.getElementById('modeSelect').addEventListener('change', function() {
                 state.settings.mode = this.value;
-            });
-
-            // Новая настройка для улучшения рукописного текста
-            document.getElementById('handwritingEnhancement').addEventListener('change', function() {
-                state.settings.handwritingEnhancement = this.value;
             });
         }
 
@@ -1045,7 +1021,6 @@
                 Object.assign(params, {
                     textord_heavy_nr: 1,
                     textord_show_boxes: 0,
-                    tessedit_char_blacklist: '|\\`~<>[]{}()@#$%^&*_=+',
                     preserve_interword_spaces: 1,
                     language_model_penalty_non_freq_dict_word: 0.5,
                     language_model_penalty_non_dict_word: 0.3,
@@ -1118,22 +1093,36 @@
             elements.resultSection.scrollIntoView({ behavior: 'smooth' });
         }
 
+        // ИСПРАВЛЕННАЯ ФУНКЦИЯ ПОСТОБРАБОТКИ ТЕКСТА
         function postProcessText(text) {
             if (!text) return text;
             
             // Удаляем лишние пробелы и переносы
             let processed = text.replace(/\n\s*\n/g, '\n').replace(/[ ]+/g, ' ');
             
-            // Исправляем частые ошибки распознавания
+            // Исправляем частые ошибки распознавания (безопасный метод)
             const replacements = {
-                '0': 'о', '1': 'і', '2': 'z', '3': 'з', '4': 'ч', '5': 'б',
-                '6': 'б', '7': 'у', '8': 'в', '9': 'д', '|': 'l', '\\': '/'
+                '0': 'о', 
+                '1': 'і', 
+                '2': 'z', 
+                '3': 'з', 
+                '4': 'ч', 
+                '5': 'б',
+                '6': 'б', 
+                '7': 'у', 
+                '8': 'в', 
+                '9': 'д', 
+                '|': 'l'
             };
             
+            // Безопасная замена без использования регулярных выражений для специальных символов
             Object.keys(replacements).forEach(wrong => {
-                const regex = new RegExp(wrong, 'g');
-                processed = processed.replace(regex, replacements[wrong]);
+                // Используем метод split и join для безопасной замены
+                processed = processed.split(wrong).join(replacements[wrong]);
             });
+            
+            // Отдельно обрабатываем обратный слеш (специальный символ)
+            processed = processed.split('\\').join('/');
             
             return processed.trim();
         }
