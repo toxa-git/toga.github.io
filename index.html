@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI OCR для рукописного текста - Умный конспектник</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary: #6366f1;
+            --secondary: #8b5cf6;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --error: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Segoe UI', system-ui;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.15);
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+
+        .header h1 {
+            margin-bottom: 10px;
+            font-size: 2.2em;
+        }
+
+        .content {
+            padding: 30px;
+        }
+
+        /* Загрузка изображения */
+        .upload-section {
+            margin-bottom: 30px;
+        }
+
+        .upload-area {
+            border: 3px dashed #ddd;
+            border-radius: 15px;
+            padding: 50px 30px;
+            text-align: center;
+            transition: all 0.3s;
+            cursor: pointer;
+            background: #fafafa;
+        }
+
+        .upload-area:hover, .upload-area.dragover {
+            border-color: var(--primary);
+            background: #f0f4ff;
+            transform: translateY(-2px);
+        }
+
+        .upload-icon {
+            font-size: 48px;
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        /* Предпросмотр и настройки */
+        .preview-section {
+            display: none;
+            margin: 30px 0;
+        }
+
+        .preview-container {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+
+        .image-preview {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        #preview {
+            width: 100%;
+            max-height: 400px;
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            object-fit: contain;
+        }
+
+        .settings-panel {
+            flex: 1;
+            min-width: 300px;
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+
+        .setting-group {
+            margin-bottom: 20px;
+        }
+
+        .setting-group label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: #374151;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            background: #ddd;
+            border-radius: 3px;
+            outline: none;
+        }
+
+        .slider-value {
+            min-width: 40px;
+            text-align: center;
+            font-weight: bold;
+        }
+
+        /* Добавляем стили для select */
+        select.full-width {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 16px;
+            background: white;
+        }
+
+        /* Кнопки управления */
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        button {
+            padding: 12px 24px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .primary-btn {
+            background: var(--primary);
+            color: white;
+        }
+
+        .primary-btn:hover {
+            background: #4f46e5;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(99, 102, 241, 0.3);
+        }
+
+        .secondary-btn {
+            background: #6c757d;
+            color: white;
+        }
+
+        .secondary-btn:hover {
+            background: #5a6268;
+            transform: translateY(-2px);
+        }
+
+        .telegram-btn {
+            background: #0088cc;
+            color: white;
+        }
+
+        .telegram-btn:hover {
+            background: #0077b3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 136, 204, 0.3);
+        }
+
+        /* Прогресс и результаты */
+        .progress-section {
+            display: none;
+            margin: 20px 0;
+        }
+
+        .progress-bar {
+            height: 8px;
+            background: #e9ecef;
+            border-radius: 4px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary), var(--success));
+            width: 0%;
+            transition: width 0.4s ease;
+        }
+
+        .progress-text {
+            text-align: center;
+            font-size: 14px;
+            color: #6c757d;
+            margin-top: 10px;
+        }
+
+        .result-section {
+            display: none;
+            margin-top: 30px;
+        }
+
+        .result-container {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 10px;
+            padding: 25px;
+        }
+
+        #result {
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            line-height: 1.8;
+            font-size: 16px;
+            min-height: 200px;
+            background: white;
+            padding: 15px;
+            border-radius: 5px;
+            border: 1px solid #e9ecef;
+        }
+
+        .result-stats {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 15px;
+            font-size: 14px;
+            color: #6c757d;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        /* Модальное окно для Telegram */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+        }
+
+        .modal h3 {
+            margin-bottom: 15px;
+            color: var(--primary);
+        }
+
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+
+        /* Адаптивность */
+        @media (max-width: 768px) {
+            .content {
+                padding: 20px;
+            }
+
+            .upload-area {
+                padding: 30px 20px;
+            }
+
+            .preview-container {
+                flex-direction: column;
+            }
+
+            .controls {
+                flex-direction: column;
+            }
+
+            button {
+                width: 100%;
+                justify-content: center;
+            }
+
+            .modal-buttons {
+                flex-direction: column;
+            }
+        }
+
+        /* Уведомления */
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            z-index: 1000;
+            transform: translateX(400px);
+            transition: transform 0.3s ease;
+            max-width: 400px;
+            word-wrap: break-word;
+        }
+
+        .notification.show {
+            transform: translateX(0);
+        }
+
+        .notification.success {
+            background: var(--success);
+        }
+
+        .notification.error {
+            background: var(--error);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1><i class="fas fa-robot"></i> AI OCR для рукописного текста</h1>
+            <p>Мощное распознавание с предобработкой и AI-улучшениями</p>
+        </div>
+
+        <div class="content">
+            <!-- Секция загрузки -->
+            <div class="upload-section">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">
+                        <i class="fas fa-cloud-upload-alt"></i>
+                    </div>
+                    <h3>Перетащите изображение с рукописным текстом</h3>
+                    <p>или нажмите для выбора файла</p>
+                    <input type="file" id="imageInput" accept="image/*" style="display: none;">
+                </div>
+            </div>
+
+            <!-- Секция предпросмотра и настроек -->
+            <div class="preview-section" id="previewSection">
+                <div class="preview-container">
+                    <div class="image-preview">
+                        <h3><i class="fas fa-image"></i> Предпросмотр</h3>
+                        <img id="preview">
+                    </div>
+
+                    <div class="settings-panel">
+                        <h3><i class="fas fa-sliders-h"></i> Настройки распознавания</h3>
+
+                        <div class="setting-group">
+                            <label for="languageSelect">Язык текста:</label>
+                            <select id="languageSelect" class="full-width">
+                                <option value="rus">Русский</option>
+                                <option value="eng">Английский</option>
+                                <option value="rus+eng">Русский + Английский</option>
+                            </select>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="contrastSlider">Контрастность: <span id="contrastValue" class="slider-value">100%</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="contrastSlider" min="50" max="200" value="100">
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="brightnessSlider">Яркость: <span id="brightnessValue" class="slider-value">100%</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="brightnessSlider" min="50" max="200" value="100">
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="sharpnessSlider">Резкость: <span id="sharpnessValue" class="slider-value">1.0</span></label>
+                            <div class="slider-container">
+                                <input type="range" id="sharpnessSlider" min="0" max="300" value="100">
+                            </div>
+                        </div>
+
+                        <div class="setting-group">
+                            <label for="modeSelect">Режим распознавания:</label>
+                            <select id="modeSelect" class="full-width">
+                                <option value="auto">Авто (рекомендуется)</option>
+                                <option value="printed">Печатный текст</option>
+                                <option value="handwritten">Рукописный текст</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="controls">
+                    <button class="secondary-btn" onclick="clearImage()">
+                        <i class="fas fa-trash"></i> Очистить
+                    </button>
+                    <button class="primary-btn" onclick="preprocessAndRecognize()">
+                        <i class="fas fa-bolt"></i> Улучшить и распознать
+                    </button>
+                    <button class="primary-btn" onclick="applySettings()">
+                        <i class="fas fa-sync-alt"></i> Применить настройки
+                    </button>
+                </div>
+            </div>
+
+            <!-- Секция прогресса -->
+            <div class="progress-section" id="progressSection">
+                <h3><i class="fas fa-spinner fa-spin"></i> Обработка изображения</h3>
+                <div class="progress-bar">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+                <div class="progress-text" id="progressText">Подготовка к обработке...</div>
+            </div>
+
+            <!-- Секция результатов -->
+            <div class="result-section" id="resultSection">
+                <h3><i class="fas fa-file-alt"></i> Результат распознавания</h3>
+                <div class="result-container">
+                    <div id="result">Здесь появится распознанный текст...</div>
+                    <div class="result-stats" id="resultStats"></div>
+                </div>
+
+                <div class="controls">
+                    <button class="primary-btn" onclick="copyToClipboard()">
+                        <i class="fas fa-copy"></i> Копировать текст
+                    </button>
+                    <button class="telegram-btn" onclick="sendToTelegram()">
+                        <i class="fab fa-telegram"></i> Отправить в Telegram
+                    </button>
+                    <button class="secondary-btn" onclick="startNewRecognition()">
+                        <i class="fas fa-redo"></i> Новое распознавание
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Модальное окно для отправки в Telegram -->
+    <div class="modal" id="telegramModal">
+        <div class="modal-content">
+            <h3><i class="fab fa-telegram"></i> Отправка в Telegram бота</h3>
+            <p>Выберите способ отправки распознанного текста:</p>
+
+            <div class="modal-buttons">
+                <button class="telegram-btn" onclick="sendViaDirectMessage()">
+                    <i class="fas fa-paper-plane"></i> Прямое сообщение
+                </button>
+                <button class="primary-btn" onclick="sendViaQuickNote()">
+                    <i class="fas fa-sticky-note"></i> Быстрая заметка
+                </button>
+                <button class="secondary-btn" onclick="closeModal()">
+                    <i class="fas fa-times"></i> Отмена
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Canvas для обработки изображений -->
+    <canvas id="processingCanvas" style="display: none;"></canvas>
+
+    <!-- Уведомления -->
+    <div class="notification" id="notification"></div>
+
+    <!-- Подключаем улучшенные библиотеки -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/tesseract.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.10.0/dist/tf.min.js"></script>
+
+    <script>
+        // ===== КОНФИГУРАЦИЯ И ПЕРЕМЕННЫЕ =====
+        const config = {
+            tesseract: {
+                workerPath: 'https://cdn.jsdelivr.net/npm/tesseract.js@4.1.1/dist/worker.min.js',
+                corePath: 'https://cdn.jsdelivr.net/npm/tesseract.js-core@4.0.2/tesseract-core.wasm.js'
+            },
+            telegram: {
+                botUsername: 'tochno_ne_scamit_bot', // ЗАМЕНИЛ НА ВАШЕГО БОТА
+                apiUrl: 'https://api.telegram.org/bot'
+            }
+        };
+
+        // Элементы DOM
+        const elements = {
+            uploadArea: document.getElementById('uploadArea'),
+            imageInput: document.getElementById('imageInput'),
+            previewSection: document.getElementById('previewSection'),
+            preview: document.getElementById('preview'),
+            progressSection: document.getElementById('progressSection'),
+            progressFill: document.getElementById('progressFill'),
+            progressText: document.getElementById('progressText'),
+            resultSection: document.getElementById('resultSection'),
+            result: document.getElementById('result'),
+            resultStats: document.getElementById('resultStats'),
+            notification: document.getElementById('notification'),
+            processingCanvas: document.getElementById('processingCanvas'),
+            telegramModal: document.getElementById('telegramModal')
+        };
+
+        // Слайдеры настроек
+        const sliders = {
+            contrast: document.getElementById('contrastSlider'),
+            brightness: document.getElementById('brightnessSlider'),
+            sharpness: document.getElementById('sharpnessSlider')
+        };
+
+        const sliderValues = {
+            contrast: document.getElementById('contrastValue'),
+            brightness: document.getElementById('brightnessValue'),
+            sharpness: document.getElementById('sharpnessValue')
+        };
+
+        // Состояние приложения
+        let state = {
+            currentFile: null,
+            worker: null,
+            isProcessing: false,
+            recognizedText: '',
+            settings: {
+                contrast: 100,
+                brightness: 100,
+                sharpness: 100,
+                language: 'rus',
+                mode: 'auto'
+            }
+        };
+
+        // ===== ИНИЦИАЛИЗАЦИЯ =====
+        document.addEventListener('DOMContentLoaded', function() {
+            initEventListeners();
+            initSliders();
+            preloadTesseract();
+        });
+
+        function initEventListeners() {
+            // Загрузка файлов
+            elements.uploadArea.addEventListener('click', () => elements.imageInput.click());
+            elements.imageInput.addEventListener('change', handleFileSelect);
+
+            // Drag and drop
+            elements.uploadArea.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                elements.uploadArea.classList.add('dragover');
+            });
+
+            elements.uploadArea.addEventListener('dragleave', () => {
+                elements.uploadArea.classList.remove('dragover');
+            });
+
+            elements.uploadArea.addEventListener('drop', (e) => {
+                e.preventDefault();
+                elements.uploadArea.classList.remove('dragover');
+                const file = e.dataTransfer.files[0];
+                if (file && file.type.startsWith('image/')) {
+                    handleImageFile(file);
+                }
+            });
+        }
+
+        function initSliders() {
+            // Инициализация слайдеров
+            Object.keys(sliders).forEach(key => {
+                sliders[key].addEventListener('input', function() {
+                    const value = this.value;
+                    sliderValues[key].textContent = key === 'sharpness' ?
+                        (value / 100).toFixed(1) : value + '%';
+                    state.settings[key] = parseInt(value);
+                });
+            });
+
+            // Селекторы
+            document.getElementById('languageSelect').addEventListener('change', function() {
+                state.settings.language = this.value;
+            });
+
+            document.getElementById('modeSelect').addEventListener('change', function() {
+                state.settings.mode = this.value;
+            });
+        }
+
+        // ===== ОБРАБОТКА ИЗОБРАЖЕНИЙ =====
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) handleImageFile(file);
+        }
+
+        function handleImageFile(file) {
+            state.currentFile = file;
+            const reader = new FileReader();
+
+            reader.onload = function(e) {
+                elements.preview.src = e.target.result;
+                elements.previewSection.style.display = 'block';
+                elements.resultSection.style.display = 'none';
+
+                // Автоматическая настройка контраста для рукописного текста
+                autoAdjustSettings();
+            };
+
+            reader.readAsDataURL(file);
+        }
+
+        function autoAdjustSettings() {
+            // Автонастройка для рукописного текста
+            sliders.contrast.value = 130;
+            sliders.brightness.value = 90;
+            sliders.sharpness.value = 150;
+
+            // Обновляем значения
+            Object.keys(sliders).forEach(key => {
+                sliders[key].dispatchEvent(new Event('input'));
+            });
+
+            showNotification('Настройки автоматически оптимизированы для рукописного текста', 'success');
+        }
+
+        // ===== ПРЕДОБРАБОТКА ИЗОБРАЖЕНИЯ =====
+        function applySettings() {
+            if (!state.currentFile) return;
+
+            const canvas = elements.processingCanvas;
+            const ctx = canvas.getContext('2d');
+            const img = new Image();
+
+            img.onload = function() {
+                // Устанавливаем размеры canvas
+                canvas.width = img.width;
+                canvas.height = img.height;
+
+                // Применяем улучшения
+                ctx.drawImage(img, 0, 0);
+                applyImageEnhancements(ctx, canvas.width, canvas.height);
+
+                // Показываем улучшенное изображение
+                elements.preview.src = canvas.toDataURL('image/jpeg', 0.9);
+                showNotification('Настройки применены успешно', 'success');
+            };
+
+            img.src = URL.createObjectURL(state.currentFile);
+        }
+
+        function applyImageEnhancements(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+
+            const contrast = state.settings.contrast / 100;
+            const brightness = (state.settings.brightness - 100) * 2.55;
+            const sharpness = state.settings.sharpness / 100;
+
+            // Применяем контраст и яркость
+            for (let i = 0; i < data.length; i += 4) {
+                // Контраст
+                data[i] = clamp((data[i] - 128) * contrast + 128 + brightness);
+                data[i+1] = clamp((data[i+1] - 128) * contrast + 128 + brightness);
+                data[i+2] = clamp((data[i+2] - 128) * contrast + 128 + brightness);
+            }
+
+            // Простое увеличение резкости (фильтр лапласиана)
+            if (sharpness > 1) {
+                const tempData = new Uint8ClampedArray(data);
+                for (let y = 1; y < height - 1; y++) {
+                    for (let x = 1; x < width - 1; x++) {
+                        const idx = (y * width + x) * 4;
+                        const sharpIdx = ((y-1)*width + x)*4;
+                        const sharpIdx2 = ((y+1)*width + x)*4;
+                        const sharpIdx3 = (y*width + (x-1))*4;
+                        const sharpIdx4 = (y*width + (x+1))*4;
+
+                        data[idx] = clamp(tempData[idx] * sharpness -
+                            (tempData[sharpIdx] + tempData[sharpIdx2] +
+                             tempData[sharpIdx3] + tempData[sharpIdx4]) * (sharpness - 1) / 4);
+                    }
+                }
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+
+            // Дополнительная бинаризация для рукописного текста
+            if (state.settings.mode === 'handwritten') {
+                applyBinarization(ctx, width, height);
+            }
+        }
+
+        function applyBinarization(ctx, width, height) {
+            const imageData = ctx.getImageData(0, 0, width, height);
+            const data = imageData.data;
+            const grayData = [];
+
+            // Конвертируем в grayscale
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = 0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2];
+                grayData.push(gray);
+            }
+
+            // Адаптивная бинаризация (метод Оцу)
+            const threshold = calculateOtsuThreshold(grayData);
+
+            // Применяем бинаризацию
+            for (let i = 0; i < data.length; i += 4) {
+                const gray = grayData[i/4];
+                const value = gray > threshold ? 255 : 0;
+                data[i] = data[i+1] = data[i+2] = value;
+            }
+
+            ctx.putImageData(imageData, 0, 0);
+        }
+
+        function calculateOtsuThreshold(grayData) {
+            // Гистограмма яркостей
+            const histogram = new Array(256).fill(0);
+            grayData.forEach(gray => histogram[Math.round(gray)]++);
+
+            // Метод Оцу для нахождения оптимального порога
+            let total = grayData.length;
+            let sum = 0;
+            for (let i = 0; i < 256; i++) sum += i * histogram[i];
+
+            let sumB = 0;
+            let wB = 0;
+            let wF = 0;
+            let varMax = 0;
+            let threshold = 0;
+
+            for (let t = 0; t < 256; t++) {
+                wB += histogram[t];
+                if (wB === 0) continue;
+
+                wF = total - wB;
+                if (wF === 0) break;
+
+                sumB += t * histogram[t];
+
+                let mB = sumB / wB;
+                let mF = (sum - sumB) / wF;
+
+                let varBetween = wB * wF * (mB - mF) * (mB - mF);
+
+                if (varBetween > varMax) {
+                    varMax = varBetween;
+                    threshold = t;
+                }
+            }
+
+            return threshold;
+        }
+
+        function clamp(value) {
+            return Math.max(0, Math.min(255, value));
+        }
+
+        // ===== РАСПОЗНАВАНИЕ ТЕКСТА =====
+        async function preprocessAndRecognize() {
+            if (!state.currentFile || state.isProcessing) return;
+
+            state.isProcessing = true;
+            elements.progressSection.style.display = 'block';
+            elements.resultSection.style.display = 'none';
+
+            try {
+                updateProgress(0, 'Предобработка изображения...');
+
+                // Предобработка изображения
+                const processedImage = await preprocessImage();
+                updateProgress(30, 'Загрузка OCR движка...');
+
+                // Инициализация Tesseract
+                const worker = await getTesseractWorker();
+                updateProgress(50, 'Распознавание текста...');
+
+                // Настройка параметров для рукописного текста
+                await configureForHandwriting(worker);
+
+                // Распознавание
+                const startTime = performance.now();
+                const { data } = await worker.recognize(processedImage);
+                const endTime = performance.now();
+
+                updateProgress(100, 'Завершено!');
+
+                // Сохраняем распознанный текст
+                state.recognizedText = data.text;
+
+                // Показ результатов
+                showRecognitionResults(data.text, data.confidence, endTime - startTime);
+
+            } catch (error) {
+                console.error('Ошибка распознавания:', error);
+                showNotification('Ошибка при распознавании: ' + error.message, 'error');
+            } finally {
+                state.isProcessing = false;
+                setTimeout(() => {
+                    elements.progressSection.style.display = 'none';
+                }, 1000);
+            }
+        }
+
+        async function preprocessImage() {
+            return new Promise((resolve) => {
+                const canvas = elements.processingCanvas;
+                const ctx = canvas.getContext('2d');
+                const img = new Image();
+
+                img.onload = function() {
+                    canvas.width = img.width * 2; // Увеличиваем разрешение
+                    canvas.height = img.height * 2;
+
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    applyImageEnhancements(ctx, canvas.width, canvas.height);
+
+                    // Конвертируем в blob для Tesseract
+                    canvas.toBlob(blob => {
+                        resolve(blob);
+                    }, 'image/jpeg', 0.95);
+                };
+
+                img.src = URL.createObjectURL(state.currentFile);
+            });
+        }
+
+        async function getTesseractWorker() {
+            if (!state.worker) {
+                state.worker = await Tesseract.createWorker();
+                await state.worker.loadLanguage(state.settings.language);
+                await state.worker.initialize(state.settings.language);
+            }
+            return state.worker;
+        }
+
+        async function configureForHandwriting(worker) {
+            const params = {
+                tessedit_pageseg_mode: Tesseract.PSM.SINGLE_BLOCK,
+                tessedit_ocr_engine_mode: Tesseract.OEM.LSTM_ONLY,
+            };
+
+            if (state.settings.mode === 'handwritten') {
+                params.tessedit_pageseg_mode = Tesseract.PSM.SINGLE_LINE;
+                // Специальные настройки для рукописного текста
+                params.textord_heavy_nr = 1;
+                params.textord_show_boxes = 0;
+            }
+
+            await worker.setParameters(params);
+        }
+
+        function showRecognitionResults(text, confidence, processingTime) {
+            elements.result.textContent = text || 'Текст не распознан';
+            elements.resultSection.style.display = 'block';
+
+            const statsHTML = `
+                <div class="stat-item">
+                    <i class="fas fa-bolt" style="color: ${confidence > 80 ? '#10b981' : '#f59e0b'}"></i>
+                    Уверенность: ${confidence ? confidence.toFixed(1) + '%' : 'N/A'}
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-clock"></i>
+                    Время: ${(processingTime / 1000).toFixed(2)}с
+                </div>
+                <div class="stat-item">
+                    <i class="fas fa-language"></i>
+                    Язык: ${state.settings.language}
+                </div>
+            `;
+
+            elements.resultStats.innerHTML = statsHTML;
+
+            // Прокрутка к результатам
+            elements.resultSection.scrollIntoView({ behavior: 'smooth' });
+        }
+
+        // ===== ИНТЕГРАЦИЯ С TELEGRAM БОТОМ =====
+        function sendToTelegram() {
+            if (!state.recognizedText || state.recognizedText.trim() === '') {
+                showNotification('Сначала распознайте текст', 'error');
+                return;
+            }
+            elements.telegramModal.style.display = 'flex';
+        }
+
+        function closeModal() {
+            elements.telegramModal.style.display = 'none';
+        }
+
+        function sendViaDirectMessage() {
+            const text = state.recognizedText;
+            const botUsername = config.telegram.botUsername;
+
+            // Формируем специальное сообщение для бота
+            const message = encodeURIComponent(`📸 Распознанный текст:\n\n${text}`);
+
+            // Создаем ссылку для открытия Telegram
+            const telegramUrl = `https://t.me/${botUsername}?start=web_ocr_${Date.now()}`;
+
+            // Открываем Telegram
+            window.open(telegramUrl, '_blank');
+
+            // Показываем инструкцию
+            showNotification('Открываю Telegram... Скопируйте и отправьте этот текст боту:\n\n' + text, 'success');
+            closeModal();
+        }
+
+        function sendViaQuickNote() {
+            const text = state.recognizedText;
+            const botUsername = config.telegram.botUsername;
+
+            // Формируем сообщение для быстрой заметки
+            const message = encodeURIComponent(`📸 Распознанный текст:\n\n${text}\n\n💡 Для сохранения как быстрой заметки используйте команду /quick_note`);
+
+            const telegramUrl = `https://t.me/${botUsername}?start=quick_note_${Date.now()}`;
+
+            window.open(telegramUrl, '_blank');
+            showNotification('Открываю бота для создания быстрой заметки...', 'success');
+            closeModal();
+        }
+
+        // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
+        function updateProgress(percent, text) {
+            elements.progressFill.style.width = percent + '%';
+            elements.progressText.textContent = text;
+        }
+
+        function showNotification(message, type) {
+            elements.notification.textContent = message;
+            elements.notification.className = `notification ${type} show`;
+
+            setTimeout(() => {
+                elements.notification.classList.remove('show');
+            }, 3000);
+        }
+
+        function copyToClipboard() {
+            const text = elements.result.textContent;
+            navigator.clipboard.writeText(text).then(() => {
+                showNotification('Текст скопирован в буфер обмена!', 'success');
+            });
+        }
+
+        function clearImage() {
+            elements.imageInput.value = '';
+            elements.previewSection.style.display = 'none';
+            state.currentFile = null;
+            state.recognizedText = '';
+        }
+
+        function startNewRecognition() {
+            elements.resultSection.style.display = 'none';
+            elements.previewSection.style.display = 'block';
+            state.recognizedText = '';
+        }
+
+        async function preloadTesseract() {
+            // Предзагрузка Tesseract в фоне
+            setTimeout(async () => {
+                try {
+                    await getTesseractWorker();
+                    showNotification('OCR движок готов к работе!', 'success');
+                } catch (error) {
+                    console.log('Предзагрузка Tesseract не удалась:', error);
+                }
+            }, 2000);
+        }
+
+        // Закрытие модального окна при клике вне его
+        window.addEventListener('click', function(event) {
+            if (event.target === elements.telegramModal) {
+                closeModal();
+            }
+        });
+
+        // ===== ОПТИМИЗАЦИЯ ДЛЯ МОБИЛЬНЫХ УСТРОЙСТВ =====
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+        });
+    </script>
+</body>
+</html>
